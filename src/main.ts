@@ -1,4 +1,4 @@
-import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
+import { Application, Assets, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import { Controller } from './controller';
 
 function createMultiplyBox(n: number, screenHeight: number) {
@@ -17,6 +17,25 @@ function createMultiplyBox(n: number, screenHeight: number) {
   container.addChild(rect);
   container.addChild(text);
   return container;
+}
+
+function isXYWithinBounds(x: number, y: number, container: Container) {
+  const { top, bottom, left, right } = container.getBounds();
+  return y >= top && y <= bottom && x >= left && x <= right;
+}
+
+type Bullet = {
+  multiplied: boolean;
+  bullet: Sprite;
+}
+
+function createBulletAt(bulletTexture: Texture, x: number, y: number): Bullet {
+  const bullet = new Sprite(bulletTexture);
+  bullet.anchor.set(0, 0); // Keep top-left origin
+  bullet.scale.set(0.1);
+  bullet.x = x;
+  bullet.y = y;
+  return { multiplied: false, bullet };
 }
 
 // Asynchronous IIFE
@@ -57,7 +76,8 @@ function createMultiplyBox(n: number, screenHeight: number) {
   }
 
   // Bullets
-  const bullets: Sprite[] = [];
+  const dummybullet = createBulletAt(bulletTexture, 0, 0);
+  const bullets: Bullet[] = [];
   const bulletSpeed = 12;
   let wasSpaceDown = false;
 
@@ -83,22 +103,36 @@ function createMultiplyBox(n: number, screenHeight: number) {
     const isSpaceDown = controller.keys.space.pressed;
     const justPressed = isSpaceDown && !wasSpaceDown;
     if (justPressed) {
-      const bullet = new Sprite(bulletTexture);
-      bullet.anchor.set(0, 0); // Keep top-left origin
-      bullet.scale.set(0.1);
       // Spawn at bunny's right side
-      bullet.x = bunny.x + bunny.width;
-      bullet.y = bunny.y + (bunny.height - bullet.height) / 2;
-      app.stage.addChild(bullet);
+      const x = bunny.x + bunny.width;
+      const y = bunny.y + (bunny.height - dummybullet.bullet.height) / 2;
+      const bullet = createBulletAt(bulletTexture, x, y)
+      app.stage.addChild(bullet.bullet);
       bullets.push(bullet);
     }
     wasSpaceDown = isSpaceDown;
 
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
-      b.x += bulletSpeed;
-      if (b.x > app.screen.width) {
-        b.destroy();
+      b.bullet.x += bulletSpeed;
+      if (!b.multiplied && isXYWithinBounds(b.bullet.x, b.bullet.y, rect1)) {
+        for (let i = 0; i < 2; i++) {
+          const bullet = createBulletAt(bulletTexture, b.bullet.x, b.bullet.y + i * 10);
+          bullet.multiplied = true;
+          app.stage.addChild(bullet.bullet);
+          bullets.push(bullet);
+        }
+      }
+      if (!b.multiplied && isXYWithinBounds(b.bullet.x, b.bullet.y, rect2)) {
+        for (let i = 0; i < 3; i++) {
+          const bullet = createBulletAt(bulletTexture, b.bullet.x, b.bullet.y + i * 10);
+          bullet.multiplied = true;
+          app.stage.addChild(bullet.bullet);
+          bullets.push(bullet);
+        }
+      }
+      if (b.bullet.x > app.screen.width) {
+        b.bullet.destroy();
         bullets.splice(i, 1);
       }
     }
