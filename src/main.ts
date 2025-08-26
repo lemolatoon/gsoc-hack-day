@@ -1,31 +1,27 @@
-import { setEngine } from "./app/getEngine";
-import { LoadScreen } from "./app/screens/LoadScreen";
-import { MainScreen } from "./app/screens/main/MainScreen";
-import { userSettings } from "./app/utils/userSettings";
-import { CreationEngine } from "./engine/engine";
+import { Application, Assets, Sprite } from 'pixi.js';
 
-/**
- * Importing these modules will automatically register there plugins with the engine.
- */
-import "@pixi/sound";
-// import "@esotericsoftware/spine-pixi-v8";
-
-// Create a new creation engine instance
-const engine = new CreationEngine();
-setEngine(engine);
-
+// Asynchronous IIFE
 (async () => {
-  // Initialize the creation engine instance
-  await engine.init({
-    background: "#1E1E1E",
-    resizeOptions: { minWidth: 768, minHeight: 1024, letterbox: false },
+  // Create a PixiJS application.
+  const app = new Application();
+
+  // Intialize the application.
+  await app.init({ background: '#1099bb', resizeTo: window });
+
+  const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+  const bunny = new Sprite(texture);
+
+  bunny.anchor.set(0.5);
+
+  bunny.x = app.screen.width / 2;
+  bunny.y = app.screen.height / 2;
+
+  app.ticker.add((time) => {
+    bunny.rotation += 0.1 * time.deltaTime;
   });
 
-  // Initialize the user settings
-  userSettings.init();
+  app.stage.addChild(bunny);
 
-  // Show the load screen
-  await engine.navigation.showScreen(LoadScreen);
-  // Show the main screen once the load screen is dismissed
-  await engine.navigation.showScreen(MainScreen);
+  // Then adding the application's canvas to the DOM body.
+  document.body.appendChild(app.canvas);
 })();
