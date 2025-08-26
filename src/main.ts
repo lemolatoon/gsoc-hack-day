@@ -1,6 +1,5 @@
 import { Application, Assets, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import { Controller } from './controller';
-import { s } from 'motion/react-client';
 
 function createMultiplyBox(n: number, screenHeight: number) {
   const container = new Container();
@@ -44,13 +43,22 @@ function createBulletAt(bulletTexture: Texture, x: number, y: number): Bullet {
   return { multiplied: false, bullet };
 }
 
-function createEnemyAt(enemyTexture: Texture, x: number, y: number, screenWidth: number): Enemy {
+function createEnemyAt(enemyTexture: Texture, x: number, y: number, enemyScale: number): Enemy {
   const enemy = new Sprite(enemyTexture);
   enemy.anchor.set(0, 0); // Keep top-left origin
-  enemy.scale.set(0.1);
-  enemy.x = screenWidth - enemy.width;
+  enemy.scale.set(enemyScale);
+  enemy.x = x;
   enemy.y = y;
   return { hit: false, enemy };
+}
+
+function checkCollision(sprite1: Sprite, sprite2: Sprite): boolean {
+  const bounds1 = sprite1.getBounds();
+  const bounds2 = sprite2.getBounds();
+  return bounds1.x < bounds2.x + bounds2.width &&
+         bounds1.x + bounds1.width > bounds2.x &&
+         bounds1.y < bounds2.y + bounds2.height &&
+         bounds1.y + bounds1.height > bounds2.y;
 }
 
 // Asynchronous IIFE
@@ -97,20 +105,34 @@ function createEnemyAt(enemyTexture: Texture, x: number, y: number, screenWidth:
   const bulletSpeed = 12;
   let wasSpaceDown = false;
 
+  const enemies: Enemy[] = [];
+  const enemySpeed = 1.5;
+  let enemySpawnTimer = 0;
+  const enemySpawnInterval = 120;
+  const initialEnemyCount = 3;
+  const maxEnemiesOnScreen = 25;
 
-  for (let j = 0; j < 5; j++){
-    const x = Math.random() * (app.screen.width - 100);
-    for (let i = 0; i < j; i++){
-      const y = Math.random() * (app.screen.height - 100);
-      const enemyBunny = createEnemyAt(enemyTexture, x, y, app.screen.width);
-      app.stage.addChild(enemyBunny.enemy);
+  function spawnEnemy() {
+    if (enemies.length >= maxEnemiesOnScreen) return;
 
-    }
+    const rightHalfScreen = app.screen.width / 2;
+    const minDistanceFromPlayer = 200;
+
+    const minSpawnX = Math.max(rightHalfScreen, bunny.x + minDistanceFromPlayer);
+    const spawnAreaWidth = app.screen.width - minSpawnX + 200;
+    const x = minSpawnX + Math.random() * spawnAreaWidth;
+    const y = Math.random() * app.screen.height;
+    const enemy = createEnemyAt(enemyTexture, x, y, 0.15);
+    app.stage.addChild(enemy.enemy);
+    enemies.push(enemy);
   }
-  // Game loop
+
+  for (let i = 0; i < initialEnemyCount; i++) {
+    spawnEnemy();
+  }
+
   app.ticker.add(() => {
     const walk = controller.keys.left.pressed || controller.keys.right.pressed;
-    const shot = controller.keys.space.pressed;
 
     let direction = -1;
     if (controller.keys.left.pressed) direction = -1;
@@ -124,6 +146,44 @@ function createEnemyAt(enemyTexture: Texture, x: number, y: number, screenWidth:
 
     // Shift the scene's position based on the character's facing direction, if in a movement state.
     if (walk) moveBunnyBy(bunny, speed * direction, 0);
+
+    enemySpawnTimer++;
+    if (enemySpawnTimer >= enemySpawnInterval) {
+      spawnEnemy();
+      enemySpawnTimer = 0;
+    }
+
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+
+      if (!e.hit) {
+        const dx = bunny.x - e.enemy.x;
+        const dy = bunny.y - e.enemy.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance > 0) {
+          const normalizedDx = (dx / distance) * enemySpeed;
+          const normalizedDy = (dy / distance) * enemySpeed;
+
+          e.enemy.x += normalizedDx;
+          e.enemy.y += normalizedDy;
+        }
+      }
+
+      if (e.enemy.x < -200 || e.enemy.x > app.screen.width + 200 ||
+          e.enemy.y < -200 || e.enemy.y > app.screen.height + 200) {
+        e.enemy.destroy();
+        enemies.splice(i, 1);
+        continue;
+      }
+
+      if (!e.hit && checkCollision(e.enemy, bunny)) {
+        e.hit = true;
+        e.enemy.tint = 0xff0000;
+      }
+    }
+
+
 
     // --- bullets
     const isSpaceDown = controller.keys.space.pressed;
@@ -141,23 +201,43 @@ function createEnemyAt(enemyTexture: Texture, x: number, y: number, screenWidth:
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
       b.bullet.x += bulletSpeed;
+
+      // Check collision with enemies first
+      let hit = false;
+      for (let j = enemies.length - 1; j >= 0; j--) {
+        const enemy = enemies[j];
+        if (!enemy.hit && checkCollision(b.bullet, enemy.enemy)) {
+          enemy.hit = true;
+          enemy.enemy.destroy();
+          enemies.splice(j, 1);
+          b.bullet.destroy();
+          bullets.splice(i, 1);
+          hit = true;
+          break;
+        }
+      }
+
+      if (hit) continue;
+
       if (!b.multiplied && isXYWithinBounds(b.bullet.x, b.bullet.y, rect1)) {
-        for (let i = 0; i < 2; i++) {
-          const bullet = createBulletAt(bulletTexture, b.bullet.x, b.bullet.y + i * 10);
+        for (let k = 0; k < 2; k++) {
+          const bullet = createBulletAt(bulletTexture, b.bullet.x, b.bullet.y + k * 10);
           bullet.multiplied = true;
           app.stage.addChild(bullet.bullet);
           bullets.push(bullet);
         }
       }
+
+      // Bullet multiplication through rect2
       if (!b.multiplied && isXYWithinBounds(b.bullet.x, b.bullet.y, rect2)) {
-        for (let i = 0; i < 3; i++) {
-          const bullet = createBulletAt(bulletTexture, b.bullet.x, b.bullet.y + i * 10);
+        for (let k = 0; k < 3; k++) {
+          const bullet = createBulletAt(bulletTexture, b.bullet.x, b.bullet.y + k * 10);
           bullet.multiplied = true;
           app.stage.addChild(bullet.bullet);
           bullets.push(bullet);
         }
       }
-      if (b.bullet.x > app.screen.width) {
+            if (b.bullet.x > app.screen.width) {
         b.bullet.destroy();
         bullets.splice(i, 1);
       }
