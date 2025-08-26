@@ -1,5 +1,6 @@
 import { Application, Assets, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import { Controller } from './controller';
+import { s } from 'motion/react-client';
 
 function createMultiplyBox(n: number, screenHeight: number) {
   const container = new Container();
@@ -29,6 +30,11 @@ type Bullet = {
   bullet: Sprite;
 }
 
+type Enemy = {
+  hit: boolean;
+  enemy: Sprite;
+}
+
 function createBulletAt(bulletTexture: Texture, x: number, y: number): Bullet {
   const bullet = new Sprite(bulletTexture);
   bullet.anchor.set(0, 0); // Keep top-left origin
@@ -36,6 +42,15 @@ function createBulletAt(bulletTexture: Texture, x: number, y: number): Bullet {
   bullet.x = x;
   bullet.y = y;
   return { multiplied: false, bullet };
+}
+
+function createEnemyAt(enemyTexture: Texture, x: number, y: number, screenWidth: number): Enemy {
+  const enemy = new Sprite(enemyTexture);
+  enemy.anchor.set(0, 0); // Keep top-left origin
+  enemy.scale.set(0.1);
+  enemy.x = screenWidth - enemy.width;
+  enemy.y = y;
+  return { hit: false, enemy };
 }
 
 // Asynchronous IIFE
@@ -50,6 +65,7 @@ function createBulletAt(bulletTexture: Texture, x: number, y: number): Bullet {
 
   const texture = await Assets.load('/raw-assets/bunny.png');
   const bulletTexture = await Assets.load('/raw-assets/bullet.png');
+  const enemyTexture = await Assets.load('/raw-assets/angry_bunny.png');
   const bunny = new Sprite(texture);
 
   bunny.scale.set(0.2);
@@ -81,6 +97,16 @@ function createBulletAt(bulletTexture: Texture, x: number, y: number): Bullet {
   const bulletSpeed = 12;
   let wasSpaceDown = false;
 
+
+  for (let j = 0; j < 5; j++){
+    const x = Math.random() * (app.screen.width - 100);
+    for (let i = 0; i < j; i++){
+      const y = Math.random() * (app.screen.height - 100);
+      const enemyBunny = createEnemyAt(enemyTexture, x, y, app.screen.width);
+      app.stage.addChild(enemyBunny.enemy);
+
+    }
+  }
   // Game loop
   app.ticker.add(() => {
     const walk = controller.keys.left.pressed || controller.keys.right.pressed;
