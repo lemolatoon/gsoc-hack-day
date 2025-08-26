@@ -1,4 +1,4 @@
-import { Application, Assets, Sprite } from 'pixi.js';
+import { Application, Assets, Graphics, rect1, Sprite } from 'pixi.js';
 import { Controller } from './controller';
 
 // Asynchronous IIFE
@@ -17,6 +17,29 @@ import { Controller } from './controller';
 
   bunny.scale.set(0.2);
   bunny.anchor.set(0, 0);
+
+  const rect1 = new Graphics();
+  const rect2 = new Graphics();
+
+  rect1.rect(50,app.screen.top ,50, app.screen.height);
+  rect1.fill('#fdf042ff');
+  rect1.stroke({ color: 0xff3300, width: 5 });
+  app.stage.addChild(rect1);
+
+  rect2.rect(50, app.screen.bottom ,50, app.screen.height);
+  rect2.fill('#fdf042ff');
+  rect2.stroke({ color: 0xff3300, width: 5 });
+  app.stage.addChild(rect2);
+
+
+
+  rect1.x = 300;
+  rect1.y = (app.screen.height / 2 - 50);
+
+  rect2.x = (app.screen.height / 2 - 50);
+  rect2.y = 300;
+
+
 
   bunny.x = 0;
   bunny.y = app.screen.height / 2;
@@ -57,8 +80,8 @@ import { Controller } from './controller';
       bullet.anchor.set(0, 0); // Keep top-left origin
       bullet.scale.set(0.1);
       // Spawn at bunny's right side
-      bullet.x = bunny.x + bunny.width;                         
-      bullet.y = bunny.y + (bunny.height - bullet.height) / 2;  
+      bullet.x = bunny.x + bunny.width;
+      bullet.y = bunny.y + (bunny.height - bullet.height) / 2;
       app.stage.addChild(bullet);
       bullets.push(bullet);
     }
@@ -68,8 +91,8 @@ import { Controller } from './controller';
       const b = bullets[i];
       b.x += bulletSpeed;
       if (b.x > app.screen.width) {
-        b.destroy();          
-        bullets.splice(i, 1); 
+        b.destroy();
+        bullets.splice(i, 1);
       }
     }
     // ------
