@@ -147,6 +147,7 @@ function checkCollision(sprite1: Sprite, sprite2: Sprite): boolean {
     // Shift the scene's position based on the character's facing direction, if in a movement state.
     if (walk) moveBunnyBy(bunny, speed * direction, 0);
 
+    // Ememies come to player
     enemySpawnTimer++;
     if (enemySpawnTimer >= enemySpawnInterval) {
       spawnEnemy();
@@ -220,24 +221,22 @@ function checkCollision(sprite1: Sprite, sprite2: Sprite): boolean {
       if (hit) continue;
 
       if (!b.multiplied && isXYWithinBounds(b.bullet.x, b.bullet.y, rect1)) {
-        for (let k = 0; k < 2; k++) {
-          const bullet = createBulletAt(bulletTexture, b.bullet.x, b.bullet.y + k * 10);
+        for (let i = 0; i < 2; i++) {
+          const bullet = createBulletAt(bulletTexture, b.bullet.x, b.bullet.y + i * 10);
           bullet.multiplied = true;
           app.stage.addChild(bullet.bullet);
           bullets.push(bullet);
         }
       }
-
-      // Bullet multiplication through rect2
       if (!b.multiplied && isXYWithinBounds(b.bullet.x, b.bullet.y, rect2)) {
-        for (let k = 0; k < 3; k++) {
-          const bullet = createBulletAt(bulletTexture, b.bullet.x, b.bullet.y + k * 10);
+        for (let i = 0; i < 3; i++) {
+          const bullet = createBulletAt(bulletTexture, b.bullet.x, b.bullet.y + i * 10);
           bullet.multiplied = true;
           app.stage.addChild(bullet.bullet);
           bullets.push(bullet);
         }
       }
-            if (b.bullet.x > app.screen.width) {
+      if (b.bullet.x > app.screen.width) {
         b.bullet.destroy();
         bullets.splice(i, 1);
       }
