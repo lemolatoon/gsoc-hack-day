@@ -1,5 +1,23 @@
-import { Application, Assets, Graphics, rect1, Sprite } from 'pixi.js';
+import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { Controller } from './controller';
+
+function createMultiplyBox(n: number, screenHeight: number) {
+  const container = new Container();
+  const rect = new Graphics();
+  rect.rect(0, 0, 50, screenHeight / 3);
+  rect.fill('#fdf042ff');
+  rect.stroke({ color: 0xff3300, width: 5 });
+
+  const text = new Text({
+    "text": `x${n}`,
+  });
+  text.x = rect.x + (rect.width - text.width) / 2;
+  text.y = rect.y + (rect.height - text.height) / 2;
+
+  container.addChild(rect);
+  container.addChild(text);
+  return container;
+}
 
 // Asynchronous IIFE
 (async () => {
@@ -18,28 +36,17 @@ import { Controller } from './controller';
   bunny.scale.set(0.2);
   bunny.anchor.set(0, 0);
 
-  const rect1 = new Graphics();
-  const rect2 = new Graphics();
-
-  rect1.rect(50,app.screen.top ,50, app.screen.height);
-  rect1.fill('#fdf042ff');
-  rect1.stroke({ color: 0xff3300, width: 5 });
-  app.stage.addChild(rect1);
-
-  rect2.rect(50, app.screen.bottom ,50, app.screen.height);
-  rect2.fill('#fdf042ff');
-  rect2.stroke({ color: 0xff3300, width: 5 });
-  app.stage.addChild(rect2);
-
-
+  const rect1 = createMultiplyBox(2, app.screen.height);
+  const rect2 = createMultiplyBox(3, app.screen.height);
 
   rect1.x = 300;
-  rect1.y = (app.screen.height / 2 - 50);
+  rect1.y = 10;
 
-  rect2.x = (app.screen.height / 2 - 50);
-  rect2.y = 300;
+  rect2.x = 300;
+  rect2.y = app.screen.height * 2 / 3 - 10;
 
-
+  app.stage.addChild(rect1);
+  app.stage.addChild(rect2);
 
   bunny.x = 0;
   bunny.y = app.screen.height / 2;
