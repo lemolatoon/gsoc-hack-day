@@ -1,47 +1,8 @@
-import { Application, Assets, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
+import { Application, Assets, Bounds, Container, Sprite, Texture } from 'pixi.js';
 import { Controller } from './controller';
-
-function createMultiplyBox(n: number, screenHeight: number) {
-  const container = new Container();
-  const rect = new Graphics();
-  rect.rect(0, 0, 50, screenHeight / 3);
-  rect.fill('#fdf042ff');
-  rect.stroke({ color: 0xff3300, width: 5 });
-
-  const text = new Text({
-    "text": `x${n}`,
-  });
-  text.x = rect.x + (rect.width - text.width) / 2;
-  text.y = rect.y + (rect.height - text.height) / 2;
-
-  container.addChild(rect);
-  container.addChild(text);
-  return container;
-}
-
-function isXYWithinBounds(x: number, y: number, container: Container) {
-  const { top, bottom, left, right } = container.getBounds();
-  return y >= top && y <= bottom && x >= left && x <= right;
-}
-
-type Bullet = {
-  multiplied: boolean;
-  bullet: Sprite;
-}
-
-type Enemy = {
-  hit: boolean;
-  enemy: Sprite;
-}
-
-function createBulletAt(bulletTexture: Texture, x: number, y: number): Bullet {
-  const bullet = new Sprite(bulletTexture);
-  bullet.anchor.set(0, 0); // Keep top-left origin
-  bullet.scale.set(0.1);
-  bullet.x = x;
-  bullet.y = y;
-  return { multiplied: false, bullet };
-}
+import { MultiplyBox } from './multiply-box';
+import { Bullet, createBulletAt } from './bullet';
+import { Enemy } from './enemy';
 
 function createEnemyAt(enemyTexture: Texture, x: number, y: number, enemyScale: number): Enemy {
   const enemy = new Sprite(enemyTexture);
@@ -52,7 +13,11 @@ function createEnemyAt(enemyTexture: Texture, x: number, y: number, enemyScale: 
   return { hit: false, enemy };
 }
 
-function checkCollision(sprite1: Sprite, sprite2: Sprite): boolean {
+type GetBoundsable = {
+  getBounds: () => Bounds;
+}
+
+function checkCollision(sprite1: GetBoundsable, sprite2: GetBoundsable): boolean {
   const bounds1 = sprite1.getBounds();
   const bounds2 = sprite2.getBounds();
   return bounds1.x < bounds2.x + bounds2.width &&
@@ -79,17 +44,22 @@ function checkCollision(sprite1: Sprite, sprite2: Sprite): boolean {
   bunny.scale.set(0.2);
   bunny.anchor.set(0, 0);
 
-  const rect1 = createMultiplyBox(2, app.screen.height);
-  const rect2 = createMultiplyBox(3, app.screen.height);
+  const multiplyBoxes: MultiplyBox[] = [];
+  const multiplyBox1 = new MultiplyBox(2, app.screen.height);
+  multiplyBox1.x = 300;
+  multiplyBox1.y = 10;
+  multiplyBox1.setBounds(multiplyBox1.x, multiplyBox1.y, multiplyBox1.width, multiplyBox1.height);
+  multiplyBoxes.push(multiplyBox1);
 
-  rect1.x = 300;
-  rect1.y = 10;
+  const multiplyBox2 = new MultiplyBox(3, app.screen.height);
+  multiplyBox2.x = 300;
+  multiplyBox2.y = app.screen.height * 2 / 3 - 10;
+  multiplyBox2.setBounds(multiplyBox2.x, multiplyBox2.y, multiplyBox2.width, multiplyBox2.height);
+  multiplyBoxes.push(multiplyBox2);
 
-  rect2.x = 300;
-  rect2.y = app.screen.height * 2 / 3 - 10;
-
-  app.stage.addChild(rect1);
-  app.stage.addChild(rect2);
+  for (const box of multiplyBoxes) {
+    app.stage.addChild(box);
+  }
 
   bunny.x = 0;
   bunny.y = app.screen.height / 2;
@@ -220,22 +190,17 @@ function checkCollision(sprite1: Sprite, sprite2: Sprite): boolean {
 
       if (hit) continue;
 
-      if (!b.multiplied && isXYWithinBounds(b.bullet.x, b.bullet.y, rect1)) {
-        for (let i = 0; i < 2; i++) {
-          const bullet = createBulletAt(bulletTexture, b.bullet.x, b.bullet.y + i * 10);
-          bullet.multiplied = true;
-          app.stage.addChild(bullet.bullet);
-          bullets.push(bullet);
+      for (const box of multiplyBoxes) {
+        if (!b.multiplied && checkCollision(b.bullet, box)) {
+          const newBullets = box.multiplyBullet(b, bulletTexture);
+          for (const newBullet of newBullets) {
+            app.stage.addChild(newBullet.bullet);
+            bullets.push(newBullet);
+          }
+          break;
         }
       }
-      if (!b.multiplied && isXYWithinBounds(b.bullet.x, b.bullet.y, rect2)) {
-        for (let i = 0; i < 3; i++) {
-          const bullet = createBulletAt(bulletTexture, b.bullet.x, b.bullet.y + i * 10);
-          bullet.multiplied = true;
-          app.stage.addChild(bullet.bullet);
-          bullets.push(bullet);
-        }
-      }
+
       if (b.bullet.x > app.screen.width) {
         b.bullet.destroy();
         bullets.splice(i, 1);
