@@ -1,4 +1,4 @@
-import { Application, Assets, Bounds, Sprite, Texture } from 'pixi.js';
+import { Application, Assets, Bounds, Sprite, Texture, Text } from 'pixi.js';
 import { Controller } from './controller';
 import { MultiplyBox } from './multiply-box';
 import { Bullet, createBulletAt } from './bullet';
@@ -86,9 +86,17 @@ function removeByIndexesMutable<T>(arr: T[], indexes: number[], onRemove: (v: T)
   const enemies: Enemy[] = [];
   const enemySpeed = 1.5;
   let enemySpawnTimer = 0;
-  const enemySpawnInterval = 120;
+  const baseEnemySpawnInterval = 120;
+  const minEnemySpawnInterval = 30;
+  const framesToMaxDifficulty = 60 * 60;
+  let elapsedFrames = 0;
   const initialEnemyCount = 3;
   const maxEnemiesOnScreen = 25;
+
+  function currentEnemySpawnInterval(): number {
+    const t = Math.min(1, elapsedFrames / framesToMaxDifficulty);
+    return Math.round(baseEnemySpawnInterval - t * (baseEnemySpawnInterval - minEnemySpawnInterval));
+  }
 
   function spawnEnemy() {
     if (enemies.length >= maxEnemiesOnScreen) return;
@@ -109,7 +117,20 @@ function removeByIndexesMutable<T>(arr: T[], indexes: number[], onRemove: (v: T)
     spawnEnemy();
   }
 
+  // Kills until hit counter UI
+  let killsSinceHit = 0;
+  const killsText = new Text({ text: `Kills: ${killsSinceHit}` });
+  killsText.anchor.set(0.5, 0);
+  killsText.x = app.screen.width / 2;
+  killsText.y = 10;
+  app.stage.addChild(killsText);
+  // Keep centered on resize
+  window.addEventListener('resize', () => {
+    killsText.x = app.screen.width / 2;
+  });
+
   app.ticker.add(() => {
+    elapsedFrames++;
     const walk = controller.keys.left.pressed || controller.keys.right.pressed;
 
     let direction = -1;
@@ -127,11 +148,13 @@ function removeByIndexesMutable<T>(arr: T[], indexes: number[], onRemove: (v: T)
 
     // Ememies come to player
     enemySpawnTimer++;
-    if (enemySpawnTimer >= enemySpawnInterval) {
+    const spawnIntervalNow = currentEnemySpawnInterval();
+    if (enemySpawnTimer >= spawnIntervalNow) {
       spawnEnemy();
       enemySpawnTimer = 0;
     }
 
+    let playerHitThisFrame = false;
     for (let i = enemies.length - 1; i >= 0; i--) {
       const e = enemies[i];
 
@@ -159,6 +182,7 @@ function removeByIndexesMutable<T>(arr: T[], indexes: number[], onRemove: (v: T)
       if (!e.hit && checkCollision(e.enemy, bunny)) {
         e.hit = true;
         e.enemy.tint = 0xff0000;
+        playerHitThisFrame = true;
       }
     }
 
@@ -191,6 +215,8 @@ function removeByIndexesMutable<T>(arr: T[], indexes: number[], onRemove: (v: T)
           enemy.enemy.destroy();
           enemies.splice(j, 1);
           bulletsToBeDestroyed.push(i);
+          killsSinceHit++;
+          killsText.text = `Kills: ${killsSinceHit}`;
           hit = true;
           break;
         }
@@ -216,6 +242,11 @@ function removeByIndexesMutable<T>(arr: T[], indexes: number[], onRemove: (v: T)
       }
     }
     removeByIndexesMutable(bullets, bulletsToBeDestroyed, (b) => b.bullet.destroy());
+
+    if (playerHitThisFrame) {
+      killsSinceHit = 0;
+      killsText.text = `Kills: ${killsSinceHit}`;
+    }
     // ------
   })
 
