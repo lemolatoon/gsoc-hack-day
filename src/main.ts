@@ -1,4 +1,4 @@
-import { Application, Assets, Bounds, Container, Sprite, Texture } from 'pixi.js';
+import { Application, Assets, Bounds, Sprite, Texture } from 'pixi.js';
 import { Controller } from './controller';
 import { MultiplyBox } from './multiply-box';
 import { Bullet, createBulletAt } from './bullet';
@@ -24,6 +24,14 @@ function checkCollision(sprite1: GetBoundsable, sprite2: GetBoundsable): boolean
          bounds1.x + bounds1.width > bounds2.x &&
          bounds1.y < bounds2.y + bounds2.height &&
          bounds1.y + bounds1.height > bounds2.y;
+}
+
+function removeByIndexesMutable<T>(arr: T[], indexes: number[], onRemove: (v: T) => void): void {
+  indexes.sort((a, b) => b - a); // 降順
+  for (const i of indexes) {
+    onRemove(arr[i]);
+    arr.splice(i, 1);
+  }
 }
 
 // Asynchronous IIFE
@@ -169,6 +177,7 @@ function checkCollision(sprite1: GetBoundsable, sprite2: GetBoundsable): boolean
     }
     wasSpaceDown = isSpaceDown;
 
+    const bulletsToBeDestroyed = [];
     for (let i = bullets.length - 1; i >= 0; i--) {
       const b = bullets[i];
       b.bullet.x += bulletSpeed;
@@ -181,8 +190,7 @@ function checkCollision(sprite1: GetBoundsable, sprite2: GetBoundsable): boolean
           enemy.hit = true;
           enemy.enemy.destroy();
           enemies.splice(j, 1);
-          b.bullet.destroy();
-          bullets.splice(i, 1);
+          bulletsToBeDestroyed.push(i);
           hit = true;
           break;
         }
@@ -192,6 +200,7 @@ function checkCollision(sprite1: GetBoundsable, sprite2: GetBoundsable): boolean
 
       for (const box of multiplyBoxes) {
         if (!b.multiplied && checkCollision(b.bullet, box)) {
+          b.multiplied = true;
           const newBullets = box.multiplyBullet(b, bulletTexture);
           for (const newBullet of newBullets) {
             app.stage.addChild(newBullet.bullet);
@@ -206,6 +215,7 @@ function checkCollision(sprite1: GetBoundsable, sprite2: GetBoundsable): boolean
         bullets.splice(i, 1);
       }
     }
+    removeByIndexesMutable(bullets, bulletsToBeDestroyed, (b) => b.bullet.destroy());
     // ------
   })
 

@@ -1,4 +1,4 @@
-import { Container, Graphics, Text, Rectangle, Texture, Sprite } from 'pixi.js';
+import { Container, Graphics, Text, Rectangle, Texture, } from 'pixi.js';
 import { Bullet, createBulletAt } from './bullet';
 
 export class MultiplyBox extends Container {
@@ -46,7 +46,7 @@ export class MultiplyBox extends Container {
 
   public multiplyBullet(bullet: Bullet, bulletTexture: Texture): Bullet[] {
     const newBullets: Bullet[] = [];
-    for (let i = 1; i < this.multiplier; i++) {
+    for (let i = 0; i < this.multiplier; i++) {
       const newBullet = createBulletAt(bulletTexture, bullet.bullet.x, bullet.bullet.y + i * 10);
       newBullet.multiplied = true;
       newBullets.push(newBullet);
